@@ -70,15 +70,15 @@ Delta_lat = np.linspace(0.0, -0.8, num=24)
 Max_no_iterations = 15    
 
 # Input data:
-EI = 2*10**8 # kNm2
-EA = 1.5*10**7  # kN
-L = 5 # m
-W = 1000 # kN
-theta_y = 0.035 # rad
-gamma = 5
-M_y = 3000  # kNm
-tol_force = 1 # kN
-tol_M_PH = 1*10**-5 # rad tolerance for the Ramberg-Osgood Newton-Raphson procedure
+EI = 3.5*10**6 # kNm2
+EA = 3.5*10**7  # kN
+L = 7.5 # m
+W = 2500 # kN
+theta_y = 0.0175 # rad
+gamma = 10
+M_y = 5500  # kNm
+tol_force = 1 # kN JAI RIEN CHANGé ICI
+tol_M_PH = 1*10**-5 # rad tolerance for the Ramberg-Osgood Newton-Raphson procedure JAI RIEN CHANGé ICI
 # ==================================
 # ====== INPUT PARAMETERS: END ======
 # ===================================
@@ -296,3 +296,4 @@ plt.title('Force-displacement response')
 plt.xlabel('Lateral Displacement [m]')
 plt.ylabel('Lateral Force [kN]')
 
+plt.show()
