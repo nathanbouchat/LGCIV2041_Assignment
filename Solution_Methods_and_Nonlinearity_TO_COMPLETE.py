@@ -12,6 +12,7 @@ The 2 parts of the code that should be completed are indicated below by:
 import numpy as np
 import matplotlib.pyplot as plt
 from math import cos, sin,pi, atan2
+import pandas as pd
 
 def Newton_Raphson_Ramberg_Osgood(theta_applied, tolerance_theta, theta_y, gamma, M_y):
     
@@ -59,7 +60,7 @@ def Newton_Raphson_Ramberg_Osgood(theta_applied, tolerance_theta, theta_y, gamma
 # ====== INPUT PARAMETERS: START ======
 # ====================================
 # Account for nonlinear geometric effects (large displacements):
-Consider_non_linear_geometric_effects = False
+Consider_non_linear_geometric_effects = True
 # Use classical Newton-Raphson (1) or Displacement-Control method (2):
 Classical_NR_or_Disp_Control = 2
 # Increments of lateral displacement in [m] (for Newton-Raphson method)
@@ -179,23 +180,26 @@ for i in range(No_increments):
             #  ========================== COMPUTE P_r with NONLINEAR GEOMETRIC EFFECTS - START ====================
             # ===================================================================================================       
             # Introduce below the commands that allow to obtain the basic element displacements (in the basic reference system) from the nodal structural displacements (in the global reference system), considering nonlinear geometry:
-
-            
-            
-            
-            
-            # Compute basic forces from basic displacements, using the basic stiffness matrix k_bsc:
-
-
-
-
-
-            # Introduce below the commands that allow to compute the nodal element forces in the global reference system from the basic element forces:
-
-
-
-
-
+            u_global = np.hstack((np.array([0, 0]), U))
+            u_loc = np.dot(Compatibility_matrix_global_local, u_global)
+            l = 3  # Index of the degree of freedom corresponding to the lateral displacement
+            sb = u_loc[l] - u_loc[0]  # Difference between displacement at the end and the base
+            cb = L + u_loc[l] + u_loc[0]  # Sum of length and displacement at the end and the base
+            Compatibility_matrix_local_basic_nonlinear = np.array([[ -cb,  sb,  0, cb,   sb,  0],
+                                                                    [  -sb/L, cb/L, 0, sb/L, -cb/L, 0],
+                                                                    [  -sb/L, cb/L, 0, sb/L, -cb/L, 1]])
+            # Compute basic element displacements from local displacements:
+            u_bsc = np.dot(Compatibility_matrix_local_basic_nonlinear, u_loc)
+            # Compute basic element forces from basic displacements, using the basic stiffness matrix k_bsc:
+            k_bsc = np.array([[ EA/L ,  0   ,  0   ],
+                              [   0   , 12*EI/(L**3), 6*EI/(L**2)],
+                              [   0   , 6*EI/(L**2), 4*EI/L]])
+            p_bsc = np.dot(k_bsc,  u_bsc)
+            # Compute nodal element forces in the local reference system from basic element forces (in the basic reference system):
+            Equilibrium_matrix_basic_local_nonlinear = np.transpose(Compatibility_matrix_local_basic_nonlinear)
+            p_loc = np.dot(Equilibrium_matrix_basic_local_nonlinear, p_bsc)
+            # Compute nodal element forces in the global reference system:
+            p_global = np.dot(Equilibrium_matrix_local_global, p_loc)
             # Compute the structural resisting forces P_r (in the global reference system), which are composed of an elastic contribution from the element and another from the nonlinear spring:
             P_r_elastic = p_global[2:] # Compute P_r_elastic (contribution from the elastic element)
             M_PH, k_PH = Newton_Raphson_Ramberg_Osgood(U[0], tol_M_PH, theta_y, gamma, M_y) # Calling Newton-Rhapson method to find the moment and stiffness corresponding to a rotation U(1) from the Ramberg-Osgood formula (contribution from the nonlinear spring)
@@ -236,7 +240,18 @@ for i in range(No_increments):
             # Computing the global element stiffness from the local element stiffness matrix:
 
             
+            # Compute local stiffness matrix:
+            L_eff = L + u_loc[3] + u_loc[0] # Effective length considering displacement and original length
+            k_bsc_nonlinear = np.array([[EA/L_eff,     0,           0],
+                                        [   0, 12*EI/(L_eff**3), 6*EI/(L_eff**2)],
+                                        [   0,  6*EI/(L_eff**2), 4*EI/L_eff]])
+            #TEST k_global = np.dot(Equilibrium_matrix_local_global, np.dot(k_bsc_nonlinear, Compatibility_matrix_global_local))
+
+            # Compute global element stiffness from local element stiffness matrix:
+            k_loc = np.dot(Equilibrium_matrix_basic_local_nonlinear, np.dot( k_bsc_nonlinear, Compatibility_matrix_local_basic_nonlinear))
             
+            # Computing the global element stiffness from the local element stiffness matrix:
+            k_global = np.dot(Equilibrium_matrix_local_global, np.dot(k_loc, Compatibility_matrix_global_local))
             # The plastic hinge stiffness k_PH was computed above...
             # Structural stiffness:
             K_str = k_global[2:,2:]
@@ -297,3 +312,11 @@ plt.xlabel('Lateral Displacement [m]')
 plt.ylabel('Lateral Force [kN]')
 
 plt.show()
+
+"""# Récupérer les données du tracé
+for i in -U_conv[1,:]:
+    pass
+print("aaaaaaaaaaaaaaaaaaaaaaaaa")
+for i in np.transpose(-P_r_conv[1,:]):
+    print(i)
+"""
