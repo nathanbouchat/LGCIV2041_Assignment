@@ -270,19 +270,19 @@ All parameters that need to be set by the user are listed in this section with #
 
 # Bridge:
 E = 30e9 # [N/m^2]
-L = 5 # [m]
+L = 1 # [m]
 h = 1 # [m]
 b = 0.25 # [m]
 A = b*h # [m^2]
 I = b * (h**3)/12 # [m^4]
 nu = 0.2 #poisson's ratio
 k = 5/6 #shear coefficient
-n_elem = 4
+n_elem = 100
 n_elem_exact = 1000
 Timoshenko = True #Timoshenko if true and Bernoulli if false
 G = E/(2*(1+nu))  # [N/m^2]
 A_c = k*A # [m^2]
-reduced = False
+reduced = True
 
 # USER
 # Coordinates of the nodes: x in the first line and y in the second line, in [m].
@@ -460,13 +460,18 @@ for elem in range(No_Elem) :
                                      [0, -12*EI_Elem[elem]/L_Elem[elem]**3, -6*EI_Elem[elem]/L_Elem[elem]**2, 0,  12*EI_Elem[elem]/L_Elem[elem]**3,   -6*EI_Elem[elem]/L_Elem[elem]**2],
                                      [0, 6*EI_Elem[elem]/L_Elem[elem]**2,   2*EI_Elem[elem]/L_Elem[elem],  0,    -6*EI_Elem[elem]/L_Elem[elem]**2,   4*EI_Elem[elem]/L_Elem[elem]]])  #MODIFIE
         #Timoshenko reduced
-        k_elem_loc_tim[elem] = np.array([[AE_Elem[elem]/L_Elem[elem], 0, 0, -AE_Elem[elem]/L_Elem[elem], 0, 0],
+        """k_elem_loc_tim[elem] = np.array([[AE_Elem[elem]/L_Elem[elem], 0, 0, -AE_Elem[elem]/L_Elem[elem], 0, 0],
                                      [0,GA_c_Elem[elem]/L_Elem[elem], GA_c_Elem[elem], 0, -GA_c_Elem[elem]/L_Elem[elem],  0],
                                      [0,GA_c_Elem[elem], EI_Elem[elem]/L_Elem[elem]+GA_c_Elem[elem]*L_Elem[elem], 0,   -GA_c_Elem[elem],  -EI_Elem[elem]/L_Elem[elem]],
                                      [-AE_Elem[elem]/L_Elem[elem], 0, 0, AE_Elem[elem]/L_Elem[elem], 0, 0],
                                      [0, -GA_c_Elem[elem]/L_Elem[elem], -GA_c_Elem[elem], 0, GA_c_Elem[elem]/L_Elem[elem], 0],
-                                     [0,0, -EI_Elem[elem]/L_Elem[elem], 0, 0,  EI_Elem[elem]/L_Elem[elem]]])#MODIFIE
-    
+                                     [0,0, -EI_Elem[elem]/L_Elem[elem], 0, 0,  EI_Elem[elem]/L_Elem[elem]]])#MODIFIE"""
+        k_elem_loc_tim[elem] = np.array([[AE_Elem[elem]/L_Elem[elem], 0, 0, -AE_Elem[elem]/L_Elem[elem], 0, 0],
+                                     [0,GA_c_Elem[elem]/L_Elem[elem], GA_c_Elem[elem]/2, 0, -GA_c_Elem[elem]/L_Elem[elem],  GA_c_Elem[elem]/2],
+                                     [0,GA_c_Elem[elem]/2, EI_Elem[elem]/L_Elem[elem]+GA_c_Elem[elem]*L_Elem[elem]/4, 0,   -GA_c_Elem[elem]/2,  -EI_Elem[elem]/L_Elem[elem]+GA_c_Elem[elem]*L_Elem[elem]/4],
+                                     [-AE_Elem[elem]/L_Elem[elem], 0, 0, AE_Elem[elem]/L_Elem[elem], 0, 0],
+                                     [0, -GA_c_Elem[elem]/L_Elem[elem], -GA_c_Elem[elem]/2, 0, GA_c_Elem[elem]/L_Elem[elem], -GA_c_Elem[elem]/2],
+                                     [0,GA_c_Elem[elem]/2, -EI_Elem[elem]/L_Elem[elem]+GA_c_Elem[elem]*L_Elem[elem]/4, 0, -GA_c_Elem[elem]/2,  EI_Elem[elem]/L_Elem[elem]+GA_c_Elem[elem]*L_Elem[elem]/4]])#MODIFIE
 
             
     # Stiffness matrices in the global reference system
@@ -580,12 +585,12 @@ Disp_Euler = U[np.arange(len(Coord[0]))*3+1]
 #PlotDeformed(Coord, Connect, Disp, Scale)
 #PlotTransversalDisplacement(Coord, Connect, Disp[1], Coord_exact, Connect_exact, U_exact, n_elem)
 #PlotRotation(Coord, Connect, rota, Coord_exact, Connect_exact, theta_exact, n_elem)
-"""
+
 if reduced==False:
     PlotTimoshenkoEuler(Coord, Connect, Disp[1], Disp_Euler, L)
 if reduced==True:
     PlotTimoshenkoEulerReduced(Coord, Connect, Disp[1], Disp_Euler, L)
-"""
+
 #Choice of the element to display 
 
 Elem_ID_to_display = 0
