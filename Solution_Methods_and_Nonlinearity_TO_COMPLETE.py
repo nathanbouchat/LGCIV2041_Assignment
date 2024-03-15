@@ -13,6 +13,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from math import cos, sin,pi, atan2
 import pandas as pd
+import math as Math
 
 def Newton_Raphson_Ramberg_Osgood(theta_applied, tolerance_theta, theta_y, gamma, M_y):
     
@@ -181,25 +182,42 @@ for i in range(No_increments):
             # ===================================================================================================       
             # Introduce below the commands that allow to obtain the basic element displacements (in the basic reference system) from the nodal structural displacements (in the global reference system), considering nonlinear geometry:
             u_global = np.hstack((np.array([0, 0]), U))
-            u_loc = np.dot(Compatibility_matrix_global_local, u_global)
-            l = 3  # Index of the degree of freedom corresponding to the lateral displacement
-            sb = u_loc[l] - u_loc[0]  # Difference between displacement at the end and the base
-            cb = L + u_loc[l] + u_loc[0]  # Sum of length and displacement at the end and the base
-            Compatibility_matrix_local_basic_nonlinear = np.array([[ -cb,  sb,  0, cb,   sb,  0],
-                                                                    [  -sb/L, cb/L, 0, sb/L, -cb/L, 0],
-                                                                    [  -sb/L, cb/L, 0, sb/L, -cb/L, 1]])
-            # Compute basic element displacements from local displacements:
+            u_loc = np.dot(Compatibility_matrix_global_local, u_global) 
+            l = ((L+u_loc[4]-u_loc[1])**2+(u_loc[5]-u_loc[2])**2)**0.5
+            beta = Math.atan((u_loc[5]-u_loc[2])/(L+u_loc[4]-u_loc[1]))
+            cb = Math.cos(beta)
+            sb = Math.sin(beta)
+            Compatibility_matrix_local_basic_nonlinear = np.array([[ -cb,  -sb,  0, cb,   sb,  0],
+                                                                    [  -sb/l, cb/l, 1, sb/l, -cb/l, 0],
+                                                                    [  -sb/l, cb/l, 0, sb/l, -cb/l, 1]])
+            Equilibrium_matrix_basic_local_nonlinear = np.transpose(Compatibility_matrix_local_basic_nonlinear)
+
+            T_E_u_loc = np.array([[ -cb,  -sb/l,  -sb/l],
+                                  [  -sb, cb/l, cb/l],
+                                  [  0, 1, 0],
+                                  [cb,sb/l,sb/l],
+                                  [sb,-cb/l,-cb/l],
+                                  [0,0,1]])
+            
+            
+            #u_bsc = np.array([l-L, u_loc[3]-beta , u_loc[6]-beta])
             u_bsc = np.dot(Compatibility_matrix_local_basic_nonlinear, u_loc)
-            # Compute basic element forces from basic displacements, using the basic stiffness matrix k_bsc:
+
             k_bsc = np.array([[ EA/L ,  0   ,  0   ],
                               [   0   , 12*EI/(L**3), 6*EI/(L**2)],
-                              [   0   , 6*EI/(L**2), 4*EI/L]])
-            p_bsc = np.dot(k_bsc,  u_bsc)
-            # Compute nodal element forces in the local reference system from basic element forces (in the basic reference system):
-            Equilibrium_matrix_basic_local_nonlinear = np.transpose(Compatibility_matrix_local_basic_nonlinear)
-            p_loc = np.dot(Equilibrium_matrix_basic_local_nonlinear, p_bsc)
-            # Compute nodal element forces in the global reference system:
+                              [   0   , 6*EI/(L**2), 4*EI/L]])#a changer
+            
+            p_bsc = np.dot(k_bsc,  u_bsc)# a chnager ?
+            
+            
+            
+            p_loc = np.dot(T_E_u_loc, p_bsc)
             p_global = np.dot(Equilibrium_matrix_local_global, p_loc)
+            
+            
+            
+            
+            
             # Compute the structural resisting forces P_r (in the global reference system), which are composed of an elastic contribution from the element and another from the nonlinear spring:
             P_r_elastic = p_global[2:] # Compute P_r_elastic (contribution from the elastic element)
             M_PH, k_PH = Newton_Raphson_Ramberg_Osgood(U[0], tol_M_PH, theta_y, gamma, M_y) # Calling Newton-Rhapson method to find the moment and stiffness corresponding to a rotation U(1) from the Ramberg-Osgood formula (contribution from the nonlinear spring)
@@ -241,10 +259,10 @@ for i in range(No_increments):
 
             
             # Compute local stiffness matrix:
-            L_eff = L + u_loc[3] + u_loc[0] # Effective length considering displacement and original length
+            L_eff = L + u_loc[3] + u_loc[0] # A CHANGER
             k_bsc_nonlinear = np.array([[EA/L_eff,     0,           0],
                                         [   0, 12*EI/(L_eff**3), 6*EI/(L_eff**2)],
-                                        [   0,  6*EI/(L_eff**2), 4*EI/L_eff]])
+                                        [   0,  6*EI/(L_eff**2), 4*EI/L_eff]])# A CHANGER
             #TEST k_global = np.dot(Equilibrium_matrix_local_global, np.dot(k_bsc_nonlinear, Compatibility_matrix_global_local))
 
             # Compute global element stiffness from local element stiffness matrix:
@@ -320,3 +338,4 @@ print("aaaaaaaaaaaaaaaaaaaaaaaaa")
 for i in np.transpose(-P_r_conv[1,:]):
     print(i)
 """
+
