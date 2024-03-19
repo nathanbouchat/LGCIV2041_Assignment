@@ -67,9 +67,9 @@ Classical_NR_or_Disp_Control = 2
 # Increments of lateral displacement in [m] (for Newton-Raphson method)
 F_lat = np.linspace(0, 300.0, num = 46) # Use for NR with linear geometry
 # Increments of lateral displacement in [m] (for Displacement-Control method)
-Delta_lat = np.linspace(0.0, -0.8, num=24)
+Delta_lat = np.linspace(0.0, -1.2, num=24)
 # Max no. of iterations for solver
-Max_no_iterations = 15    
+Max_no_iterations = 100    
 
 # Input data:
 EI = 3.5*10**6 # kNm2
@@ -183,8 +183,8 @@ for i in range(No_increments):
             # Introduce below the commands that allow to obtain the basic element displacements (in the basic reference system) from the nodal structural displacements (in the global reference system), considering nonlinear geometry:
             u_global = np.hstack((np.array([0, 0]), U))
             u_loc = np.dot(Compatibility_matrix_global_local, u_global) 
-            l = ((L+u_loc[4]-u_loc[1])**2+(u_loc[5]-u_loc[2])**2)**0.5
-            beta = Math.atan((u_loc[5]-u_loc[2])/(L+u_loc[4]-u_loc[1]))
+            l = ((L+u_loc[3]-u_loc[2])**2+(u_loc[4]-u_loc[1])**2)**0.5
+            beta = Math.atan((u_loc[4]-u_loc[1])/(L+u_loc[3]-u_loc[0]))
             cb = Math.cos(beta)
             sb = Math.sin(beta)
             Compatibility_matrix_local_basic_nonlinear = np.array([[ -cb,  -sb,  0, cb,   sb,  0],
@@ -200,16 +200,19 @@ for i in range(No_increments):
                                   [0,0,1]])
             
             
-            #u_bsc = np.array([l-L, u_loc[3]-beta , u_loc[6]-beta])
+            #u_bsc = np.array([[l-L], [u_loc[3]-beta ], [u_loc[6]-beta],[0]])
             u_bsc = np.dot(Compatibility_matrix_local_basic_nonlinear, u_loc)
 
             k_bsc = np.array([[ EA/L ,  0   ,  0   ],
-                              [   0   , 12*EI/(L**3), 6*EI/(L**2)],
-                              [   0   , 6*EI/(L**2), 4*EI/L]])#a changer
+                              [   0   ,4*EI/L,2*EI/L],
+                              [   0   ,2*EI/L,4*EI/L]])
             
             p_bsc = np.dot(k_bsc,  u_bsc)# a chnager ?
+
+
             
-            
+            #depuis k_loc calculer p_bsc
+            #ou alors c'est direct p_loc ?
             
             p_loc = np.dot(T_E_u_loc, p_bsc)
             p_global = np.dot(Equilibrium_matrix_local_global, p_loc)
@@ -252,21 +255,39 @@ for i in range(No_increments):
             #  ========================== COMPUTE k_loc with NONLINEAR GEOMETRIC EFFECTS - START ====================
             # ===================================================================================================                
             # Compute local stiffness matrix:
+            sb=s
+            cb=c
+            G1 = 1/l * np.array([[s*s,-c*s,0,-s*s,c*s,0],
+                                 [-c*s,c*c,0,c*s,-c*c,0],
+                                 [0,0,0,0,0,0],
+                                 [-s*s,c*s,0,s*s,-c*s,0],
+                                 [c*s,-c*c,0,-c*s,c*c,0],
+                                 [0,0,0,0,0,0]])
+            G23 = 1/l**2 * np.array([[-2*c*s, c*c-s*s,0,2*c*s,s*s-c*c,0],
+                                 [c*c-s*s, 2*c*s,0,s*s-c*c,-2*c*s,0],
+                                 [0,0,0,0,0,0],
+                                 [2*c*s, s*s-c*c,0,-2*c*s,c*c-s*s,0],
+                                 [s*s-c*c, -2*c*s,0,c*c-s*s,2*c*s,0],
+                                 [0,0,0,0,0,0]])
             
-            
+            k_geom_loc = np.dot(p_bsc[0],G1) + np.dot(p_bsc[1]+p_bsc[2],G23)
+
+
+            k_bsc = np.array([[ EA/L ,  0   ,  0   ],
+                              [   0   ,4*EI/L,2*EI/L],
+                              [   0   ,2*EI/L,4*EI/L]])
+
+            k_loc = np.dot(np.transpose(Compatibility_matrix_local_basic_nonlinear),np.dot(k_bsc,Compatibility_matrix_local_basic_nonlinear)) + k_geom_loc
 
             # Computing the global element stiffness from the local element stiffness matrix:
 
             
             # Compute local stiffness matrix:
-            L_eff = L + u_loc[3] + u_loc[0] # A CHANGER
-            k_bsc_nonlinear = np.array([[EA/L_eff,     0,           0],
-                                        [   0, 12*EI/(L_eff**3), 6*EI/(L_eff**2)],
-                                        [   0,  6*EI/(L_eff**2), 4*EI/L_eff]])# A CHANGER
+            
             #TEST k_global = np.dot(Equilibrium_matrix_local_global, np.dot(k_bsc_nonlinear, Compatibility_matrix_global_local))
 
             # Compute global element stiffness from local element stiffness matrix:
-            k_loc = np.dot(Equilibrium_matrix_basic_local_nonlinear, np.dot( k_bsc_nonlinear, Compatibility_matrix_local_basic_nonlinear))
+            #k_loc = np.dot(Equilibrium_matrix_basic_local_nonlinear, np.dot( k_bsc_nonlinear, Compatibility_matrix_local_basic_nonlinear))
             
             # Computing the global element stiffness from the local element stiffness matrix:
             k_global = np.dot(Equilibrium_matrix_local_global, np.dot(k_loc, Compatibility_matrix_global_local))
@@ -331,11 +352,12 @@ plt.ylabel('Lateral Force [kN]')
 
 plt.show()
 
-"""# Récupérer les données du tracé
+# Récupérer les données du tracé
 for i in -U_conv[1,:]:
-    pass
+    print(i)
 print("aaaaaaaaaaaaaaaaaaaaaaaaa")
 for i in np.transpose(-P_r_conv[1,:]):
     print(i)
-"""
+
+
 
